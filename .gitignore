@@ -1,0 +1,56 @@
+# rETL .gitignore
+
+# Rust build artifacts
+/target/
+**/target/
+
+# IDE/editor files
+/.vscode/
+*.code-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Dependency folders
+Cargo.lock
+
+# Python cache (if any Python scripts)
+/__pycache__/
+/*.pyc
+
+# Polars cache (if used)
+.polars_cache/
+
+# Test output
+*.profraw
+
+# Ignore data and output files (but keep example data)
+components/data-profiler/data/output/
+components/data-profiler/data/*.tmp
+components/data-profiler/data/*.log
+
+# Ignore secrets or credentials
+*.env
+.env.*
+
+# Ignore Jupyter notebooks outputs (if any)
+/*.ipynb_checkpoints
+
+# Ignore compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ignore markdown files
+*.md
+
+# Ignore backup files
+*~
+*.swp
+*.bak
