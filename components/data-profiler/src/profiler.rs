@@ -1,10 +1,13 @@
-use anyhow::Result;
-use polars::prelude::*;
-use polars::io::SerReader;
+use polars::prelude::*;           // DataFrame, Series, ChunkedArray, DataType, CsvReader, JsonReader, ParquetReader
+use polars::prelude::CsvReadOptions;
+use polars::io::SerReader;       // brings `.finish()` into scope
 use rayon::prelude::*;
-use std::path::Path;
 use std::fs::File;
-use std::io::Write;
+use std::path::Path;
+use anyhow::{Result, Context};
+use polars::datatypes::DataType;
+use std::io::Write; 
+use serde::{Serialize, Deserialize};
 
 /// Supported input file formats
 #[derive(Debug, Clone)]
@@ -27,22 +30,29 @@ pub fn infer_format(path: &Path) -> InputFormat {
     }
 }
 
-/// Read a file into a Polars DataFrame dynamically based on format
 pub fn read_dataframe(path: &Path, format: &InputFormat, delimiter: u8) -> Result<DataFrame> {
+    let file = File::open(path)
+        .with_context(|| format!("Failed to open file: {}", path.display()))?;
+
     match format {
         InputFormat::Csv | InputFormat::Txt => {
-            Ok(CsvReader::from_path(path)?
-                .has_header(true)
-                .with_delimiter(delimiter)
-                .finish()?)
+            let options = CsvReadOptions::default()
+                .with_has_header(true)
+                .map_parse_options(|opts| opts.with_separator(delimiter));
+            let reader = options.into_reader_with_file_handle(file);
+            reader
+                .finish()
+                .context("Failed to read CSV/TXT file")
         }
         InputFormat::Json => {
-            let file = std::fs::File::open(path)?;
-            let reader = JsonReader::new(file);
-            Ok(reader.finish()?)
+            JsonReader::new(file)
+                .finish()
+                .context("Failed to read JSON file")
         }
         InputFormat::Parquet => {
-            Ok(ParquetReader::new(std::fs::File::open(path)?).finish()?)
+            ParquetReader::new(file)
+                .finish()
+                .context("Failed to read Parquet file")
         }
         InputFormat::Unknown => Err(anyhow::anyhow!("Unsupported file format")),
     }
@@ -56,17 +66,27 @@ pub struct Profile {
     pub nulls: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MinMaxValue {
+    Int(i64),
+    Float(f64),
+    Str(String),
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// Detailed profiling information for a single column
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ColumnProfileDetailed {
     pub column: String,
     pub dtype: String,
     pub nulls: usize,
     pub unique: Option<usize>,
-    pub min: Option<String>,
-    pub max: Option<String>,
+    pub min: MinMaxValue,
+    pub max: MinMaxValue,
     pub sample_values: Option<Vec<String>>,
 }
+
+
 /// Profiles a DataFrame
 #[allow(dead_code)]
 pub fn profile_df(df: DataFrame) -> Result<(usize, Vec<Profile>)> {
@@ -83,48 +103,86 @@ pub fn profile_df(df: DataFrame) -> Result<(usize, Vec<Profile>)> {
     Ok((row_count, profiles))
 }
 
-/// Performs detailed profiling on a DataFrame
+/// Profiles a DataFrame with detailed information
 pub fn profile_df_detailed(df: &DataFrame) -> Result<(usize, Vec<ColumnProfileDetailed>)> {
     let row_count = df.height();
-    let profiles: Vec<ColumnProfileDetailed> = df
-        .get_columns()
-        .par_iter()
-        .map(|s| {
-            let dtype = format!("{:?}", s.dtype());
-            let nulls = s.null_count();
-            let unique = s.n_unique().ok();
+    let profiles: Vec<ColumnProfileDetailed> = df.get_columns()
+    .par_iter()
+    .map(|col| {
+        let s = col.as_series().expect("Expected a Series from Column"); // <-- THIS fixes type mismatch
+        
+        let dtype_obj = s.dtype();
+        let dtype = format!("{:?}", dtype_obj);
+        let nulls = s.null_count();
+        let unique = s.n_unique().ok();
 
-            let (min, max) = match s.dtype() {
-                DataType::Int64 => (
-                    s.min::<i64>().map(|v| v.to_string()),
-                    s.max::<i64>().map(|v| v.to_string()),
-                ),
-                DataType::Float64 => (
-                    s.min::<f64>().map(|v| v.to_string()),
-                    s.max::<f64>().map(|v| v.to_string()),
-                ),
-                DataType::Utf8 => (None, None),
-                _ => (None, None),
-            };
+        let (min, max) = match dtype_obj {
+            DataType::Int64 | DataType::Int32 => s.i64()
+                .map(|ca| (
+                    ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                    ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                ))
+                .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
 
-            let sample_values = s.unique().ok().map(|u| {
-                u.head(Some(3))
-                    .iter()
-                    .filter_map(|v| v.to_string().into())
+            DataType::Float64 | DataType::Float32 => s.f64()
+                .map(|ca| (
+                    ca.min().map(MinMaxValue::Float).unwrap_or(MinMaxValue::None),
+                    ca.max().map(MinMaxValue::Float).unwrap_or(MinMaxValue::None),
+                ))
+                .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
+
+            DataType::Boolean => s.bool()
+                .map(|ca| (
+                    ca.min().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
+                    ca.max().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
+                ))
+                .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
+
+            DataType::Date => s.i32()
+                .map(|ca| (
+                    ca.min().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
+                    ca.max().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
+                ))
+                .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
+        
+            DataType::Datetime(_, _) => s.i64()
+                .map(|ca| (
+                    ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                    ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                ))
+                .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
+
+            DataType::String => (MinMaxValue::None, MinMaxValue::None),  // skip min/max for string
+
+            _ => (MinMaxValue::None, MinMaxValue::None),
+        };
+
+        let sample_values = if matches!(dtype_obj, DataType::String) {
+            Some(
+                (0..s.len())
+                    .filter_map(|idx| s.get(idx).ok())
+                    .filter_map(|val| match val {
+                        polars::prelude::AnyValue::String(v) => Some(v.to_string()),
+                        _ => None,
+                    })
+                    .take(3)
                     .collect::<Vec<_>>()
-            });
+            )
+        } else {
+            None
+        };
 
-            ColumnProfileDetailed {
-                column: s.name().to_string(),
-                dtype,
-                nulls,
-                unique,
-                min,
-                max,
-                sample_values,
-            }
-        })
-        .collect();
+        ColumnProfileDetailed {
+            column: s.name().to_string(),
+            dtype,
+            nulls,
+            unique,
+            min,
+            max,
+            sample_values,
+        }
+    })
+    .collect();
 
     Ok((row_count, profiles))
 }
@@ -138,7 +196,6 @@ pub fn profile_any(path: &Path, delimiter: u8) -> Result<(usize, Vec<Profile>)> 
     profile_df(df)
 }
 
-/// Write detailed profile to JSON
 pub fn export_profile_to_json(profiles: &[ColumnProfileDetailed], path: &Path) -> Result<()> {
     let json = serde_json::to_string_pretty(profiles)?;
     let mut file = File::create(path)?;
