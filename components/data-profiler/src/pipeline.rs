@@ -60,3 +60,86 @@ pub fn run_pipeline(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::Path;
+
+    #[test]
+    fn test_load_data_csv() {
+        let path = "data/examples/sample.csv";
+        let df = load_data(path, "csv").expect("Should load CSV");
+        assert_eq!(df.shape().0, 3); // 3 rows
+        assert!(df.get_column_names().iter().any(|c| c.as_str() == "name"));
+    }
+
+    #[test]
+    fn test_load_data_json() {
+        let path = "data/examples/sample.json";
+        let df = load_data(path, "json").expect("Should load JSON");
+        assert_eq!(df.shape().0, 3); // 3 rows
+        assert!(df.get_column_names().iter().any(|c| c.as_str() == "name"));
+    }
+
+    #[test]
+    fn test_save_data_csv() {
+        let path = "data/examples/sample.csv";
+        let df = load_data(path, "csv").unwrap();
+        let out_path = "data/examples/test_out.csv";
+        save_data(&df, out_path, "csv").unwrap();
+        assert!(Path::new(out_path).exists());
+        fs::remove_file(out_path).unwrap();
+    }
+
+    #[test]
+    fn test_save_data_parquet() {
+        let path = "data/examples/sample.csv";
+        let df = load_data(path, "csv").unwrap();
+        let out_path = "data/examples/test_out.parquet";
+        save_data(&df, out_path, "parquet").unwrap();
+        assert!(Path::new(out_path).exists());
+        fs::remove_file(out_path).unwrap();
+    }
+
+    #[test]
+    fn test_run_pipeline_drop_nulls() {
+        let out_path = "data/examples/test_clean.csv";
+        run_pipeline(
+            "data/examples/sample.csv",
+            "csv",
+            Some(out_path),
+            "csv",
+            None,
+            None,
+            true,
+        ).unwrap();
+        let df = load_data(out_path, "csv").unwrap();
+        let null_counts = df.null_count();
+        let all_zero = null_counts
+            .get_columns()
+            .iter()
+            .all(|s| s.as_series().unwrap().sum::<u32>().unwrap_or(0) == 0);
+        assert!(all_zero);
+        fs::remove_file(out_path).unwrap();
+    }
+
+    #[test]
+    fn test_run_pipeline_filter() {
+        let out_path = "data/examples/test_filter.csv";
+        run_pipeline(
+            "data/examples/sample.csv",
+            "csv",
+            Some(out_path),
+            "csv",
+            Some("name"),
+            Some("Alice"),
+            false,
+        ).unwrap();
+        let df = load_data(out_path, "csv").unwrap();
+        assert_eq!(df.shape().0, 1);
+        assert_eq!(df.column("name").unwrap().str().unwrap().get(0).unwrap(), "Alice");
+        fs::remove_file(out_path).unwrap();
+    }
+}
