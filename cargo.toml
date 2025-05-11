@@ -1,5 +1,9 @@
 [workspace]
 members = [
-    "components/data-profiler"
+    "components/conform",
+    "components/data-profiler",
+    "components/extract",
+    "components/load",
+    "components/transform"
 ]
 resolver = "2"
