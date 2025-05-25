@@ -109,7 +109,6 @@ jobs:
             git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
             echo "EOF"
           } >> $GITHUB_OUTPUT
-        run: cargo test -p ${{ matrix.crate }} --all-targets
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
       - name: Run code coverage
