@@ -8,3 +8,4 @@ polars = "0.48"
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 rayon = "1"
+serde_json = "1"

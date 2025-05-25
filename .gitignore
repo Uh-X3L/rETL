@@ -59,3 +59,4 @@ create_etl_maturity_issues.sh
 # Local scripts/tools
 check-unused-deps.sh
 
+test_all.sh

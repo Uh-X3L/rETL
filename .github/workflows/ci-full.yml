@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  schedule:
+    - cron: '0 0 */14 * *' # Every 2 weeks (at midnight UTC)
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove unwanted files
+        run: rm -f rust-toolchain.toml
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Audit dependencies
+        run: cargo audit
+      - name: Build docs
+        run: cargo doc --workspace --no-deps --document-private-items
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Build all crates
+        run: cargo build --workspace --all-targets
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Test all crates
+        run: cargo test --workspace --all-targets
+      - name: Install cargo2junit
+        run: cargo install cargo2junit
+      - name: Run tests and output JUnit XML
+        run: cargo test --workspace --all-targets --no-fail-fast | cargo2junit > junit.xml
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: junit.xml
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Run code coverage
+        run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: lcov.info
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info

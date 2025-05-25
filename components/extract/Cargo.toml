@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-polars = { version = "0.48", features = ["csv", "json", "parquet"] }
-anyhow = "1"
+polars = { version = "0.48", features = ["lazy", "csv", "json", "parquet"] }
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.10"
