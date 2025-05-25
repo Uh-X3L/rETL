@@ -1,17 +1,21 @@
 use anyhow::Result;
 use log::{error, info};
-use polars::prelude::*;
-use std::fs::File;
-
+use polars::prelude::{LazyFrame, LazyCsvReader, LazyJsonLineReader, LazyFileListReader};
 
 /// Extracts a CSV file using Polars' lazy API.
 pub fn extract_csv_lazy(path: &str) -> Result<LazyFrame> {
     info!("Extracting CSV from path: {}", path);
-    Ok(
-        LazyCsvReader::new(path)
-            .with_has_header(true)
-            .finish()?
-    )
+    LazyCsvReader::new(path)
+        .with_has_header(true)
+        .finish()
+        .map(|lf| {
+            info!("Successfully loaded CSV file: {}", path);
+            lf
+        })
+        .map_err(|e| {
+            error!("Failed to load CSV file {}: {}", path, e);
+            e.into()
+        })
 }
 
 /// Extracts a text file with customizable options using Polars' lazy API.
@@ -33,33 +37,52 @@ pub fn extract_text_lazy(
     if let Some(qc) = quote_char {
         reader = reader.with_quote_char(Some(qc));
     }
-
     if let Some(cp) = comment_prefix {
         reader = reader.with_comment_prefix(Some(cp.into()));
     }
-
     if let Some(infer_len) = infer_schema_length {
         reader = reader.with_infer_schema_length(Some(infer_len));
     }
 
-    Ok(reader.finish()?)
+    reader
+        .finish()
+        .map(|lf| {
+            info!("Successfully loaded text file: {}", path);
+            lf
+        })
+        .map_err(|e| {
+            error!("Failed to load text file {}: {}", path, e);
+            e.into()
+        })
 }
 
 /// Extracts a JSON file using Polars' lazy API.
 pub fn extract_json_lazy(path: &str) -> Result<LazyFrame> {
     info!("Extracting JSON from path: {}", path);
-    Ok(
-        LazyJsonLineReader::new(path)
-            .finish()?
-    )
+    LazyJsonLineReader::new(path)
+        .finish()
+        .map(|lf| {
+            info!("Successfully loaded JSON file: {}", path);
+            lf
+        })
+        .map_err(|e| {
+            error!("Failed to load JSON file {}: {}", path, e);
+            e.into()
+        })
 }
 
 /// Extracts a Parquet file using Polars' lazy API.
 pub fn extract_parquet_lazy(path: &str) -> Result<LazyFrame> {
     info!("Extracting Parquet from path: {}", path);
-    Ok(
-        LazyFrame::scan_parquet(path, Default::default())?
-    )
+    LazyFrame::scan_parquet(path, Default::default())
+        .map(|lf| {
+            info!("Successfully loaded Parquet file: {}", path);
+            lf
+        })
+        .map_err(|e| {
+            error!("Failed to load Parquet file {}: {}", path, e);
+            e.into()
+        })
 }
 
 /// Initializes the logger. Call this at the start of your application or tests.
@@ -76,15 +99,16 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.csv";
         let result = extract_csv_lazy(path);
-        assert!(result.is_ok() || result.is_err()); // Accepts missing file for now
+        assert!(result.is_ok(), "extract_csv_lazy failed: {:?}", result.err());
     }
 
     #[test]
     fn test_extract_text_lazy() {
         init_logging();
-        let path = "data/examples/sample.txt";
-        let result = extract_text_lazy(path, b'|', false, None, None, 0, Some(100));
-        assert!(result.is_ok() || result.is_err()); // Accepts missing file for now
+        let path = "data/examples/sample.json"; // Use the .json file for text test as requested
+        // Use comma as delimiter, no header, no quote, no comment, no skip, no schema inference
+        let result = extract_text_lazy(path, b',', false, None, None, 0, None);
+        assert!(result.is_ok(), "extract_text_lazy failed: {:?}", result.err());
     }
 
     #[test]
@@ -92,7 +116,7 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.json";
         let result = extract_json_lazy(path);
-        assert!(result.is_ok() || result.is_err()); // Accepts missing file for now
+        assert!(result.is_ok(), "extract_json_lazy failed: {:?}", result.err());
     }
 
     #[test]
@@ -100,6 +124,6 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.parquet";
         let result = extract_parquet_lazy(path);
-        assert!(result.is_ok() || result.is_err()); // Accepts missing file for now
+        assert!(result.is_ok(), "extract_parquet_lazy failed: {:?}", result.err());
     }
 }
