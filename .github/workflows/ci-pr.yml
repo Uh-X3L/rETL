@@ -68,7 +68,7 @@ jobs:
 
   build-and-test:
     needs: detect-changed-crates
-    if: ${{ fromJson(needs.detect-changed-crates.outputs.changed) != [] }}
+    if: ${{ join(fromJson(needs.detect-changed-crates.outputs.changed)) != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
