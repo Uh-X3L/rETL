@@ -24,7 +24,11 @@ jobs:
       - name: Get changed files
         id: diff
         run: |
-          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})" >> $GITHUB_OUTPUT
+          {
+            echo "files<<EOF"
+            git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
       - name: Detect changed crates
         id: set-matrix
         run: |
