@@ -118,7 +118,7 @@ jobs:
           fetch-depth: 0
       - name: Remove unwanted files
         run: rm -f rust-toolchain.toml
-      - uses: dtolnay/rust-toolchain@1.100.0
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
