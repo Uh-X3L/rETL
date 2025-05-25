@@ -1,13 +1,13 @@
 mod cli;
 
+use anyhow::Result;
 use clap::Parser;
 use cli::Cli;
-use polars::prelude::*;
-use anyhow::Result;
-use extract::*;
 use conform::*;
+use extract::*;
+use load::{load_csv, load_json, load_parquet};
+use polars::prelude::*;
 use transform::*;
-use load::{load_csv, load_parquet, load_json};
 
 fn main() -> Result<()> {
     let args = Cli::parse();
@@ -17,7 +17,12 @@ fn main() -> Result<()> {
         "json" => extract_json(args.input.file.to_str().unwrap())?,
         "parquet" => extract_parquet(args.input.file.to_str().unwrap())?,
         "txt" => extract_txt(args.input.file.to_str().unwrap())?,
-        _ => return Err(anyhow::anyhow!("Unsupported input format: {:?}", args.input.format)),
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Unsupported input format: {:?}",
+                args.input.format
+            ))
+        }
     };
 
     // Conform (profiling, normalization, etc.)
@@ -27,7 +32,10 @@ fn main() -> Result<()> {
     if args.transform.drop_nulls {
         df = df.drop_nulls::<String>(None)?;
     }
-    if let (Some(col), Some(val)) = (args.transform.filter_col.as_deref(), args.transform.filter_val.as_deref()) {
+    if let (Some(col), Some(val)) = (
+        args.transform.filter_col.as_deref(),
+        args.transform.filter_val.as_deref(),
+    ) {
         // If you want to use filter_by_value, implement or import it, otherwise comment out or use a simple filter
         // df = filter_by_value(df, col, val)?;
     }
@@ -35,10 +43,36 @@ fn main() -> Result<()> {
 
     // Load
     match &format!("{:?}", args.output.out_format).to_lowercase()[..] {
-        "csv" => load_csv(&df, args.output.output.as_ref().map(|p| p.to_str().unwrap()).unwrap_or("output.csv"))?,
-        "parquet" => load_parquet(&df, args.output.output.as_ref().map(|p| p.to_str().unwrap()).unwrap_or("output.parquet"))?,
-        "json" => load_json(&df, args.output.output.as_ref().map(|p| p.to_str().unwrap()).unwrap_or("output.json"))?,
-        _ => return Err(anyhow::anyhow!("Unsupported output format: {:?}", args.output.out_format)),
+        "csv" => load_csv(
+            &df,
+            args.output
+                .output
+                .as_ref()
+                .map(|p| p.to_str().unwrap())
+                .unwrap_or("output.csv"),
+        )?,
+        "parquet" => load_parquet(
+            &df,
+            args.output
+                .output
+                .as_ref()
+                .map(|p| p.to_str().unwrap())
+                .unwrap_or("output.parquet"),
+        )?,
+        "json" => load_json(
+            &df,
+            args.output
+                .output
+                .as_ref()
+                .map(|p| p.to_str().unwrap())
+                .unwrap_or("output.json"),
+        )?,
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Unsupported output format: {:?}",
+                args.output.out_format
+            ))
+        }
     }
     Ok(())
 }

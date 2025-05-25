@@ -2,7 +2,12 @@ use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "etl-cli", version, author, about = "A simple Rust ETL pipeline using Polars")]
+#[command(
+    name = "etl-cli",
+    version,
+    author,
+    about = "A simple Rust ETL pipeline using Polars"
+)]
 pub struct Cli {
     #[clap(flatten)]
     pub input: InputArgs,

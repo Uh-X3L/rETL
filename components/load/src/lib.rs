@@ -1,8 +1,8 @@
-pub use polars::prelude::*;
 pub use anyhow::Result;
+pub use polars::prelude::*;
+use serde_json;
 use std::fs::File;
 use std::io::Write;
-use serde_json;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
@@ -10,17 +10,24 @@ pub fn add(left: u64, right: u64) -> u64 {
 
 pub fn load_csv(df: &DataFrame, path: &str) -> Result<()> {
     let file = File::create(path)?;
-    CsvWriter::new(file).finish(&mut df.clone()).map_err(Into::into)
+    CsvWriter::new(file)
+        .finish(&mut df.clone())
+        .map_err(Into::into)
 }
 
 pub fn load_parquet(df: &DataFrame, path: &str) -> Result<()> {
     let file = File::create(path)?;
-    ParquetWriter::new(file).finish(&mut df.clone()).map(|_| ()).map_err(Into::into)
+    ParquetWriter::new(file)
+        .finish(&mut df.clone())
+        .map(|_| ())
+        .map_err(Into::into)
 }
 
 pub fn load_json(df: &DataFrame, path: &str) -> Result<()> {
     let file = File::create(path)?;
-    JsonWriter::new(file).finish(&mut df.clone()).map_err(Into::into)
+    JsonWriter::new(file)
+        .finish(&mut df.clone())
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

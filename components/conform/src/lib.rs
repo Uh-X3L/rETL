@@ -1,8 +1,8 @@
-use polars::prelude::*;
 use anyhow::Result;
+use polars::prelude::*;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use rayon::prelude::*;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -61,38 +61,60 @@ pub fn profile_df_detailed(df: &DataFrame) -> Result<(usize, Vec<ColumnProfileDe
             let (min, max) = match dtype_obj {
                 DataType::Int64 | DataType::Int32 => s
                     .i64()
-                    .map(|ca| (
-                        ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
-                        ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
-                    ))
+                    .map(|ca| {
+                        (
+                            ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                            ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                        )
+                    })
                     .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
                 DataType::Float64 | DataType::Float32 => s
                     .f64()
-                    .map(|ca| (
-                        ca.min().map(MinMaxValue::Float).unwrap_or(MinMaxValue::None),
-                        ca.max().map(MinMaxValue::Float).unwrap_or(MinMaxValue::None),
-                    ))
+                    .map(|ca| {
+                        (
+                            ca.min()
+                                .map(MinMaxValue::Float)
+                                .unwrap_or(MinMaxValue::None),
+                            ca.max()
+                                .map(MinMaxValue::Float)
+                                .unwrap_or(MinMaxValue::None),
+                        )
+                    })
                     .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
                 DataType::Boolean => s
                     .bool()
-                    .map(|ca| (
-                        ca.min().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
-                        ca.max().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
-                    ))
+                    .map(|ca| {
+                        (
+                            ca.min()
+                                .map(|v| MinMaxValue::Int(v as i64))
+                                .unwrap_or(MinMaxValue::None),
+                            ca.max()
+                                .map(|v| MinMaxValue::Int(v as i64))
+                                .unwrap_or(MinMaxValue::None),
+                        )
+                    })
                     .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
                 DataType::Date => s
                     .i32()
-                    .map(|ca| (
-                        ca.min().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
-                        ca.max().map(|v| MinMaxValue::Int(v as i64)).unwrap_or(MinMaxValue::None),
-                    ))
+                    .map(|ca| {
+                        (
+                            ca.min()
+                                .map(|v| MinMaxValue::Int(v as i64))
+                                .unwrap_or(MinMaxValue::None),
+                            ca.max()
+                                .map(|v| MinMaxValue::Int(v as i64))
+                                .unwrap_or(MinMaxValue::None),
+                        )
+                    })
                     .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
                 DataType::Datetime(_, _) => s
                     .i64()
-                    .map(|ca| (
-                        ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
-                        ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
-                    ))
+                    .map(|ca| {
+                        (
+                            ca.min().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                            ca.max().map(MinMaxValue::Int).unwrap_or(MinMaxValue::None),
+                        )
+                    })
                     .unwrap_or((MinMaxValue::None, MinMaxValue::None)),
                 DataType::String => (MinMaxValue::None, MinMaxValue::None),
                 _ => (MinMaxValue::None, MinMaxValue::None),
