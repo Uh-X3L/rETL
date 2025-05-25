@@ -13,6 +13,40 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  detect-changed-crates:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.set-matrix.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get changed files
+        id: diff
+        run: |
+          echo "::set-output name=files::$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})"
+      - name: Detect changed crates
+        id: set-matrix
+        run: |
+          changed_crates=()
+          for crate in components/*; do
+            if [ -d "$crate" ]; then
+              crate_name=$(basename "$crate")
+              for file in ${{ steps.diff.outputs.files }}; do
+                if [[ $file == $crate/* ]]; then
+                  changed_crates+=("$crate_name")
+                  break
+                fi
+              done
+            fi
+          done
+          if [ ${#changed_crates[@]} -eq 0 ]; then
+            echo "No crates changed. Defaulting to all."
+            changed_crates=($(ls components))
+          fi
+          matrix=$(printf ',"%s"' "${changed_crates[@]}")
+          matrix="[${matrix:1}]"
+          echo "Changed crates: $matrix"
+          echo "::set-output name=changed::$matrix"
+
   lint:
     if: |
       contains(github.event.pull_request.labels.*.name, 'run-ci') && !contains(github.event.pull_request.labels.*.name, 'ignore-ci')
@@ -40,10 +74,14 @@ jobs:
       - name: Build docs
         run: cargo doc --workspace --no-deps --document-private-items
   build-and-test:
+    needs: detect-changed-crates
     if: |
       contains(github.event.pull_request.labels.*.name, 'run-ci') && !contains(github.event.pull_request.labels.*.name, 'ignore-ci')
-    name: Build and Test
+    name: Build and Test ${{ matrix.crate }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate: ${{fromJson(needs.detect-changed-crates.outputs.changed)}}
     steps:
       - uses: actions/checkout@v4
       - name: Remove unwanted files
@@ -54,19 +92,19 @@ jobs:
           shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
           cache-on-failure: true
       - name: Build
-        run: cargo build --workspace --all-targets
+        run: cargo build -p ${{ matrix.crate }} --all-targets
       - name: Test
-        run: cargo test --workspace --all-targets
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin --locked
+        run: cargo test -p ${{ matrix.crate }} --all-targets
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
       - name: Run code coverage
-        run: cargo tarpaulin --workspace --all --out Xml
+        run: cargo llvm-cov --package ${{ matrix.crate }} --all-features --lcov --output-path lcov.info
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: cobertura.xml
+          name: coverage-report-${{ matrix.crate }}
+          path: lcov.info
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: cobertura.xml
+          files: lcov.info
