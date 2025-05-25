@@ -38,6 +38,7 @@ jobs:
             if [ -d "$crate" ]; then
               crate_name=$(basename "$crate")
               for file in ${{ steps.diff.outputs.files }}; do
+                # Only match .rs files inside the crate directory
                 if [[ $file == $crate/*.rs ]]; then
                   changed_crates+=("$crate_name")
                   break
