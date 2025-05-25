@@ -3,7 +3,6 @@ opt-level = 1
 [workspace]
 members = [
     "components/conform",
-    "components/data-profiler",
     "components/extract",
     "components/load",
     "components/transform"

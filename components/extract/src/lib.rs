@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::{error, info};
-use polars::prelude::{LazyFrame, LazyCsvReader, LazyJsonLineReader, LazyFileListReader};
+use polars::prelude::{LazyCsvReader, LazyFileListReader, LazyFrame, LazyJsonLineReader};
 
 /// Extracts a CSV file using Polars' lazy API.
 pub fn extract_csv_lazy(path: &str) -> Result<LazyFrame> {
@@ -99,16 +99,24 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.csv";
         let result = extract_csv_lazy(path);
-        assert!(result.is_ok(), "extract_csv_lazy failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "extract_csv_lazy failed: {:?}",
+            result.err()
+        );
     }
 
     #[test]
     fn test_extract_text_lazy() {
         init_logging();
         let path = "data/examples/sample.json"; // Use the .json file for text test as requested
-        // Use comma as delimiter, no header, no quote, no comment, no skip, no schema inference
+                                                // Use comma as delimiter, no header, no quote, no comment, no skip, no schema inference
         let result = extract_text_lazy(path, b',', false, None, None, 0, None);
-        assert!(result.is_ok(), "extract_text_lazy failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "extract_text_lazy failed: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -116,7 +124,11 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.json";
         let result = extract_json_lazy(path);
-        assert!(result.is_ok(), "extract_json_lazy failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "extract_json_lazy failed: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -124,6 +136,10 @@ mod tests {
         init_logging();
         let path = "data/examples/sample.parquet";
         let result = extract_parquet_lazy(path);
-        assert!(result.is_ok(), "extract_parquet_lazy failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "extract_parquet_lazy failed: {:?}",
+            result.err()
+        );
     }
 }
