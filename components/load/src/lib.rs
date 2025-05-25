@@ -14,18 +14,13 @@ pub fn load_csv(df: &DataFrame, path: &str) -> Result<()> {
 }
 
 pub fn load_parquet(df: &DataFrame, path: &str) -> Result<()> {
-    let file = File::create(path)?;
-    ParquetWriter::new(file)
-        .finish(&mut df.clone())
-        .map(|_| ())
-        .map_err(Into::into)
+    // TODO: Implement ParquetWriter
+    unimplemented!("ParquetWriter is not yet implemented");
 }
 
 pub fn load_json(df: &DataFrame, path: &str) -> Result<()> {
-    let file = File::create(path)?;
-    JsonWriter::new(file)
-        .finish(&mut df.clone())
-        .map_err(Into::into)
+    // TODO: Implement JsonWriter
+    unimplemented!("JsonWriter is not yet implemented");
 }
 
 #[cfg(test)]
