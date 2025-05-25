@@ -1,8 +1,6 @@
 pub use anyhow::Result;
 pub use polars::prelude::*;
-use serde_json;
 use std::fs::File;
-use std::io::Write;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
@@ -46,7 +44,7 @@ mod tests {
         let df = DataFrame::default();
         let path = "test.json";
         let result = load_json(&df, path);
-        assert!(result.is_ok() || matches!(result, Err(_)));
+        assert!(result.is_ok() || result.is_err());
         let _ = std::fs::remove_file(path);
     }
 }

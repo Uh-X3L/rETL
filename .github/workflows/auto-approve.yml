@@ -1,0 +1,15 @@
+name: Auto Approve PRs by Author
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  auto-approve:
+    if: github.actor == github.event.pull_request.user.login && github.actor == 'Uh-X3L'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-approve PR if author is the actor and is Uh-X3L
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

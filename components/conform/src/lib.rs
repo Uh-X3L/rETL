@@ -2,7 +2,6 @@ use anyhow::Result;
 use polars::prelude::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;

@@ -1,5 +1,7 @@
 # rETL: Modular Rust ETL Pipeline
 
+![CI](https://github.com/Dell/rETL/actions/workflows/ci.yml/badge.svg)
+
 rETL is a modular, extensible ETL (Extract, Transform, Load) framework written in Rust, designed for data engineering and analytics workflows. The project is organized as a Rust workspace with separate crates for each ETL stage.
 
 ## Project Structure

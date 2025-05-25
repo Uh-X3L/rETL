@@ -40,6 +40,6 @@ mod tests {
     fn test_extract_txt() {
         let path = "data/examples/sample.txt";
         let result = extract_txt(path);
-        assert!(result.is_ok() || matches!(result, Err(_))); // Accepts missing file for now
+        assert!(result.is_ok() || result.is_err()); // Accepts missing file for now
     }
 }
