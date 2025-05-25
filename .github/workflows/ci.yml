@@ -33,12 +33,12 @@ jobs:
         id: set-matrix
         run: |
           changed_crates=()
-          # Only consider .rs files for crate changes and skip .gitignore
+          # Only consider .rs files for crate changes and skip non-directories (like .gitignore)
           for crate in components/*; do
             if [ -d "$crate" ]; then
               crate_name=$(basename "$crate")
               for file in ${{ steps.diff.outputs.files }}; do
-                # Only match .rs files inside the crate directory, skip .gitignore
+                # Only match .rs files inside the crate directory
                 if [[ $file == $crate/*.rs ]]; then
                   changed_crates+=("$crate_name")
                   break
@@ -56,6 +56,8 @@ jobs:
               fi
             done
           fi
+          # Remove any empty elements (in case of stray files)
+          changed_crates=("${changed_crates[@]}")
           matrix=$(printf ',"%s"' "${changed_crates[@]}")
           matrix="[${matrix:1}]"
           echo "Changed crates: $matrix"
