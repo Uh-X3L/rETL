@@ -5,8 +5,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches-ignore:
-      - '**'
     # Only run on push to main (or your default branch)
     branches:
       - main
