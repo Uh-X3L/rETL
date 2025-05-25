@@ -55,3 +55,7 @@ components/data-profiler/data/*.log
 *.swp
 *.bak
 create_etl_maturity_issues.sh
+
+# Local scripts/tools
+check-unused-deps.sh
+
