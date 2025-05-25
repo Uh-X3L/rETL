@@ -57,3 +57,16 @@ jobs:
         run: cargo build --workspace --all-targets
       - name: Test
         run: cargo test --workspace --all-targets
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+      - name: Run code coverage
+        run: cargo tarpaulin --workspace --all --out Xml
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: cobertura.xml
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: cobertura.xml
