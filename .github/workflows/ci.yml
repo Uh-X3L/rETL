@@ -45,13 +45,14 @@ jobs:
               if [[ $crate_name == .* ]]; then
                 continue
               fi
-              for file in ${{ steps.diff.outputs.files }}; do
+              # Iterate over changed files from the diff step
+              while IFS= read -r file; do
                 # Only match .rs files inside the crate directory
                 if [[ $file == $crate/*.rs ]]; then
                   changed_crates+=("$crate_name")
                   break
                 fi
-              done
+              done <<< "${{ steps.diff.outputs.files }}"
             fi
           done
           if [ ${#changed_crates[@]} -eq 0 ]; then
