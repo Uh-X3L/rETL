@@ -38,7 +38,6 @@ We welcome contributions! To get started:
 - Ensure your code passes all CI checks (see the CI badge above).
 - Open a pull request with a clear description of your changes.
 - For major changes, please open an issue first to discuss what you would like to change.
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for more details (or create this file if it does not exist).
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
