@@ -8,9 +8,8 @@ pub fn extract_csv_lazy(path: &str) -> Result<LazyFrame> {
     LazyCsvReader::new(path)
         .with_has_header(true)
         .finish()
-        .map(|lf| {
+        .inspect(|_| {
             info!("Successfully loaded CSV file: {}", path);
-            lf
         })
         .map_err(|e| {
             error!("Failed to load CSV file {}: {}", path, e);
@@ -46,9 +45,8 @@ pub fn extract_text_lazy(
 
     reader
         .finish()
-        .map(|lf| {
+        .inspect(|_| {
             info!("Successfully loaded text file: {}", path);
-            lf
         })
         .map_err(|e| {
             error!("Failed to load text file {}: {}", path, e);
@@ -61,9 +59,8 @@ pub fn extract_json_lazy(path: &str) -> Result<LazyFrame> {
     info!("Extracting JSON from path: {}", path);
     LazyJsonLineReader::new(path)
         .finish()
-        .map(|lf| {
+        .inspect(|_| {
             info!("Successfully loaded JSON file: {}", path);
-            lf
         })
         .map_err(|e| {
             error!("Failed to load JSON file {}: {}", path, e);
@@ -75,9 +72,8 @@ pub fn extract_json_lazy(path: &str) -> Result<LazyFrame> {
 pub fn extract_parquet_lazy(path: &str) -> Result<LazyFrame> {
     info!("Extracting Parquet from path: {}", path);
     LazyFrame::scan_parquet(path, Default::default())
-        .map(|lf| {
+        .inspect(|_| {
             info!("Successfully loaded Parquet file: {}", path);
-            lf
         })
         .map_err(|e| {
             error!("Failed to load Parquet file {}: {}", path, e);

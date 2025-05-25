@@ -1,9 +1,0 @@
-// Original Cargo.toml from data-profiler crate (archived)
-// This crate is no longer active in the workspace.
-
-[package]
-name = "data-profiler"
-version = "0.1.0"
-edition = "2021"
-
-# ...rest of the original file if needed...

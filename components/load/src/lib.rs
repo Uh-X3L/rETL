@@ -13,12 +13,12 @@ pub fn load_csv(df: &DataFrame, path: &str) -> Result<()> {
         .map_err(Into::into)
 }
 
-pub fn load_parquet(df: &DataFrame, path: &str) -> Result<()> {
+pub fn load_parquet(_df: &DataFrame, _path: &str) -> Result<()> {
     // TODO: Implement ParquetWriter
     unimplemented!("ParquetWriter is not yet implemented");
 }
 
-pub fn load_json(df: &DataFrame, path: &str) -> Result<()> {
+pub fn load_json(_df: &DataFrame, _path: &str) -> Result<()> {
     // TODO: Implement JsonWriter
     unimplemented!("JsonWriter is not yet implemented");
 }
