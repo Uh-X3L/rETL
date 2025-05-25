@@ -5,7 +5,7 @@ pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
-pub fn select_columns(mut df: DataFrame, columns: &Vec<String>) -> Result<DataFrame> {
+pub fn select_columns(mut df: DataFrame, columns: &[String]) -> Result<DataFrame> {
     let cols: Vec<String> = columns.iter().map(|s| s.to_string()).collect();
     df = df.select(&cols)?;
     Ok(df)

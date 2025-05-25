@@ -3,11 +3,8 @@ mod cli;
 use anyhow::Result;
 use clap::Parser;
 use cli::Cli;
-use conform::*;
-use extract::*;
+use extract::{extract_csv, extract_json, extract_parquet, extract_txt};
 use load::{load_csv, load_json, load_parquet};
-use polars::prelude::*;
-use transform::*;
 
 fn main() -> Result<()> {
     let args = Cli::parse();
@@ -32,7 +29,7 @@ fn main() -> Result<()> {
     if args.transform.drop_nulls {
         df = df.drop_nulls::<String>(None)?;
     }
-    if let (Some(col), Some(val)) = (
+    if let (Some(_col), Some(_val)) = (
         args.transform.filter_col.as_deref(),
         args.transform.filter_val.as_deref(),
     ) {
