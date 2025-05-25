@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    # Only run on push to main (or your default branch)
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  detect-changed-crates:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.set-matrix.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: diff
+        run: |
+          {
+            echo "files<<EOF"
+            git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+      - name: Detect changed crates
+        id: set-matrix
+        run: |
+          changed_crates=()
+          # Only consider .rs files for crate changes and skip non-directories and dotfiles (like .gitignore)
+          for crate in components/*; do
+            if [ -d "$crate" ]; then
+              crate_name=$(basename "$crate")
+              # Skip any directory that starts with a dot (hidden or config dirs)
+              if [[ $crate_name == .* ]]; then
+                continue
+              fi
+              # Iterate over changed files from the diff step
+              while IFS= read -r file; do
+                # Only match .rs files inside the crate directory
+                if [[ $file == $crate/*.rs ]]; then
+                  changed_crates+=("$crate_name")
+                  break
+                fi
+              done <<< "${{ steps.diff.outputs.files }}"
+            fi
+          done
+          if [ ${#changed_crates[@]} -eq 0 ]; then
+            echo "No crates changed. Skipping build-and-test."
+            changed_crates=()
+          fi
+          # Remove any empty elements (in case of stray files)
+          changed_crates=("${changed_crates[@]}")
+          matrix=$(printf ',"%s"' "${changed_crates[@]}")
+          matrix="[${matrix:1}]"
+          echo "Changed crates: $matrix"
+          echo "changed=$matrix" >> $GITHUB_OUTPUT
+
+  build-and-test:
+    needs: detect-changed-crates
+    if: ${{ fromJson(needs.detect-changed-crates.outputs.changed) != [] }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate: ${{fromJson(needs.detect-changed-crates.outputs.changed)}}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy -p ${{ matrix.crate }} --all-targets -- -D warnings
+      - name: Build
+        run: cargo build -p ${{ matrix.crate }} --all-targets
+      - name: Test
+        run: cargo test -p ${{ matrix.crate }} --all-targets
