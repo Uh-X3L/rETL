@@ -1,4 +1,6 @@
 use anyhow::Result;
+use polars::io::json::JsonReader;
+use polars::prelude::ParquetReader;
 use polars::prelude::*;
 use std::fs::File;
 

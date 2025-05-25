@@ -19,10 +19,12 @@ jobs:
       changed: ${{ steps.set-matrix.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Get changed files
         id: diff
         run: |
-          echo "::set-output name=files::$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})"
+          echo "files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})" >> $GITHUB_OUTPUT
       - name: Detect changed crates
         id: set-matrix
         run: |
@@ -45,7 +47,7 @@ jobs:
           matrix=$(printf ',"%s"' "${changed_crates[@]}")
           matrix="[${matrix:1}]"
           echo "Changed crates: $matrix"
-          echo "::set-output name=changed::$matrix"
+          echo "changed=$matrix" >> $GITHUB_OUTPUT
 
   lint:
     if: |
@@ -54,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Remove unwanted files
         run: rm -f rust-toolchain.toml
       - uses: dtolnay/rust-toolchain@1.86.0
@@ -84,6 +88,8 @@ jobs:
         crate: ${{fromJson(needs.detect-changed-crates.outputs.changed)}}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Remove unwanted files
         run: rm -f rust-toolchain.toml
       - uses: dtolnay/rust-toolchain@1.86.0
@@ -108,3 +114,12 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: lcov.info
+      - name: Install cargo2junit
+        run: cargo install cargo2junit
+      - name: Run tests and output JUnit XML
+        run: cargo test -p ${{ matrix.crate }} --all-targets --no-fail-fast -- --format=json | cargo2junit > junit.xml
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: junit.xml
