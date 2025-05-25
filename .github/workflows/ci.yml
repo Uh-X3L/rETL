@@ -33,12 +33,12 @@ jobs:
         id: set-matrix
         run: |
           changed_crates=()
-          # Only consider .rs files for crate changes
+          # Only consider .rs files for crate changes and skip .gitignore
           for crate in components/*; do
             if [ -d "$crate" ]; then
               crate_name=$(basename "$crate")
               for file in ${{ steps.diff.outputs.files }}; do
-                # Only match .rs files inside the crate directory
+                # Only match .rs files inside the crate directory, skip .gitignore
                 if [[ $file == $crate/*.rs ]]; then
                   changed_crates+=("$crate_name")
                   break
@@ -48,7 +48,13 @@ jobs:
           done
           if [ ${#changed_crates[@]} -eq 0 ]; then
             echo "No crates changed. Defaulting to all."
-            changed_crates=($(ls components))
+            changed_crates=()
+            for crate in components/*; do
+              if [ -d "$crate" ]; then
+                crate_name=$(basename "$crate")
+                changed_crates+=("$crate_name")
+              fi
+            done
           fi
           matrix=$(printf ',"%s"' "${changed_crates[@]}")
           matrix="[${matrix:1}]"
