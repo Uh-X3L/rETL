@@ -33,11 +33,12 @@ jobs:
         id: set-matrix
         run: |
           changed_crates=()
+          # Only consider .rs files for crate changes
           for crate in components/*; do
             if [ -d "$crate" ]; then
               crate_name=$(basename "$crate")
               for file in ${{ steps.diff.outputs.files }}; do
-                if [[ $file == $crate/* ]]; then
+                if [[ $file == $crate/*.rs ]]; then
                   changed_crates+=("$crate_name")
                   break
                 fi
