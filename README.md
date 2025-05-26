@@ -1,5 +1,9 @@
 # rETL: Modular Rust ETL Pipeline
+Pull Requests CI Status
+[![Rust CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml)
+Full Repository Analysis Status
 [![CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml)
+Coverage (Codecov) Status
 [![codecov](https://codecov.io/gh/Uh-X3L/rETL/graph/badge.svg)](https://codecov.io/gh/Uh-X3L/rETL)
 
 rETL is a modular, extensible ETL (Extract, Transform, Load) framework written in Rust, designed for data engineering and analytics workflows. The project is organized as a Rust workspace with separate crates for each ETL stage.
