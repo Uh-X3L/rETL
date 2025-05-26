@@ -1,6 +1,5 @@
 # rETL: Modular Rust ETL Pipeline
-
-[![CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci.yml)
+[![CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml)
 [![codecov](https://codecov.io/gh/Uh-X3L/rETL/branch/main/graph/badge.svg)](https://codecov.io/gh/Uh-X3L/rETL)
 
 rETL is a modular, extensible ETL (Extract, Transform, Load) framework written in Rust, designed for data engineering and analytics workflows. The project is organized as a Rust workspace with separate crates for each ETL stage.
@@ -31,7 +30,7 @@ rETL is a modular, extensible ETL (Extract, Transform, Load) framework written i
    ```
 
 ## Maintainers
-- [Uh-X3L](https://github.com/Uh-X3L) — primary maintainer
+- Created and maintained by [Uh-X3L](https://github.com/Uh-X3L) — primary maintainer
 
 ## Contributing
 We welcome contributions! To get started:
@@ -70,3 +69,7 @@ Before submitting a pull request, please ensure your code passes all quality che
   ```
 
 All of these checks are run automatically in CI, but running them locally helps you catch issues early.
+
+## Security Exceptions
+
+See [SECURITY_EXCEPTIONS.md](SECURITY_EXCEPTIONS.md) for documented audit exceptions and rationale.
