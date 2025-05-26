@@ -83,7 +83,7 @@ pub fn extract_parquet_lazy(path: &str) -> Result<LazyFrame> {
 
 /// Initializes the logger. Call this at the start of your application or tests.
 pub fn init_logging() {
-    use flexi_logger::{Logger, Duplicate, Age, Cleanup, Criterion, Naming, FileSpec};
+    use flexi_logger::{Logger, Duplicate, Age, Cleanup, Criterion, Naming, FileSpec, WriteMode};
     Logger::try_with_env()
         .unwrap()
         .log_to_file(FileSpec::default().directory("logs").basename("extract").suppress_timestamp())
@@ -93,6 +93,7 @@ pub fn init_logging() {
             Naming::Timestamps,
             Cleanup::KeepLogFiles(7),
         )
+        .write_mode(WriteMode::Direct)
         .start()
         .unwrap();
 }
@@ -118,7 +119,7 @@ mod tests {
         init_logging_once();
         log::info!("Test log message for file logging");
         log::logger().flush();
-        thread::sleep(Duration::from_millis(300));
+        thread::sleep(Duration::from_millis(1000));
         let log_dir = fs::read_dir("logs").expect("logs dir should exist");
         let mut found = false;
         for entry in log_dir {
@@ -126,6 +127,7 @@ mod tests {
             let path = entry.path();
             if path.extension().map(|e| e == "log").unwrap_or(false) {
                 let contents = fs::read_to_string(&path).unwrap();
+                println!("Log file {} contents:\n{}", path.display(), contents);
                 if contents.contains("Test log message for file logging") {
                     found = true;
                     break;
