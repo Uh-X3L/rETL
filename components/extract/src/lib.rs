@@ -106,10 +106,7 @@ pub fn init_logging() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use std::sync::Once;
-    use std::thread;
-    use std::time::Duration;
 
     static INIT: Once = Once::new();
     fn init_logging_once() {
@@ -121,7 +118,7 @@ mod tests {
     #[test]
     fn test_logging_creates_log_file() {
         // Use logtest for in-memory log assertion
-        let mut logger = logtest::Logger::start();
+        let logger = logtest::Logger::start();
         log::info!("Test log message for in-memory logging");
         let logs: Vec<_> = logger.collect();
         let found = logs.iter().any(|rec| {
@@ -148,7 +145,8 @@ mod tests {
     fn test_extract_text_lazy() {
         init_logging_once();
         let path = "data/examples/sample.json";
-        let result = extract_text_lazy(path, b',', false, None, None, 0, None);
+        let result: std::result::Result<LazyFrame, anyhow::Error> =
+            extract_text_lazy(path, b',', false, None, None, 0, None);
         assert!(
             result.is_ok(),
             "extract_text_lazy failed: {:?}",

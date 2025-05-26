@@ -68,3 +68,7 @@ test_pr.sh
 
 # Ignore devcontainer and all its contents
 .devcontainer/
+
+# Rust toolchain directory
+.rustup/
+.cargo/
