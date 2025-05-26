@@ -54,12 +54,13 @@ components/data-profiler/data/*.log
 *~
 *.swp
 *.bak
-create_etl_maturity_issues.sh
+
+# Ignore coverage reports
+*.info
 
 # Local scripts/tools
 check-unused-deps.sh
+create_etl_maturity_issues.sh
 
 test_all.sh
-
-lcov.info
-lcov-*.info
+lcov*.info
