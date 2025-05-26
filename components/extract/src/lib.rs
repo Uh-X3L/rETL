@@ -83,16 +83,60 @@ pub fn extract_parquet_lazy(path: &str) -> Result<LazyFrame> {
 
 /// Initializes the logger. Call this at the start of your application or tests.
 pub fn init_logging() {
-    let _ = env_logger::builder().is_test(false).try_init();
+    use flexi_logger::{Logger, Duplicate, Age, Cleanup, Criterion, Naming, FileSpec};
+    Logger::try_with_env()
+        .unwrap()
+        .log_to_file(FileSpec::default().directory("logs").basename("extract").suppress_timestamp())
+        .duplicate_to_stdout(Duplicate::Info)
+        .rotate(
+            Criterion::Age(Age::Day),
+            Naming::Timestamps,
+            Cleanup::KeepLogFiles(7),
+        )
+        .start()
+        .unwrap();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::thread;
+    use std::time::Duration;
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+    fn init_logging_once() {
+        INIT.call_once(|| {
+            let _ = std::panic::catch_unwind(|| init_logging());
+        });
+    }
+
+    #[test]
+    fn test_logging_creates_log_file() {
+        let _ = fs::remove_dir_all("logs");
+        init_logging_once();
+        log::info!("Test log message for file logging");
+        thread::sleep(Duration::from_millis(100));
+        let log_dir = fs::read_dir("logs").expect("logs dir should exist");
+        let mut found = false;
+        for entry in log_dir {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.extension().map(|e| e == "log").unwrap_or(false) {
+                let contents = fs::read_to_string(&path).unwrap();
+                if contents.contains("Test log message for file logging") {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        assert!(found, "Log file with expected message should be created");
+    }
 
     #[test]
     fn test_extract_csv_lazy() {
-        init_logging();
+        init_logging_once();
         let path = "data/examples/sample.csv";
         let result = extract_csv_lazy(path);
         assert!(
@@ -104,9 +148,8 @@ mod tests {
 
     #[test]
     fn test_extract_text_lazy() {
-        init_logging();
-        let path = "data/examples/sample.json"; // Use the .json file for text test as requested
-                                                // Use comma as delimiter, no header, no quote, no comment, no skip, no schema inference
+        init_logging_once();
+        let path = "data/examples/sample.json";
         let result = extract_text_lazy(path, b',', false, None, None, 0, None);
         assert!(
             result.is_ok(),
@@ -117,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_extract_json_lazy() {
-        init_logging();
+        init_logging_once();
         let path = "data/examples/sample.json";
         let result = extract_json_lazy(path);
         assert!(
@@ -129,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_extract_parquet_lazy() {
-        init_logging();
+        init_logging_once();
         let path = "data/examples/sample.parquet";
         let result = extract_parquet_lazy(path);
         assert!(
