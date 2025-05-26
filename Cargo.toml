@@ -2,9 +2,10 @@
 opt-level = 1
 [workspace]
 members = [
-    "components/conform",
     "components/extract",
     "components/load",
-    "components/transform"
+    "components/conform",
+    "components/transform",
+    "sqldb"
 ]
 resolver = "2"
