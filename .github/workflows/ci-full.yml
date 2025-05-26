@@ -13,33 +13,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Remove unwanted files
-        run: rm -f rust-toolchain.toml
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
-          cache-on-failure: true
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-      - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-      - name: Audit dependencies
-        run: cargo audit
-      - name: Build docs
-        run: cargo doc --workspace --no-deps --document-private-items
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -54,25 +27,67 @@ jobs:
           cache-on-failure: true
       - name: Build all crates
         run: cargo build --workspace --all-targets
+      - name: Upload target dir
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-dir
+          path: target
 
-  test:
-    name: Test
+  lint:
+    name: Lint
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Remove unwanted files
+        run: rm -f rust-toolchain.toml
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
           cache-on-failure: true
-      - name: Test all crates
-        run: cargo test --workspace --all-targets
+      - name: Download target dir
+        uses: actions/download-artifact@v4
+        with:
+          name: target-dir
+          path: target
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit dependencies
+        run: cargo audit
+      - name: Build docs
+        run: cargo doc --workspace --no-deps --document-private-items
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
+          cache-on-failure: true
+      - name: Download target dir
+        uses: actions/download-artifact@v4
+        with:
+          name: target-dir
+          path: target
       - name: Install cargo2junit
         run: cargo install cargo2junit --locked
       - name: Run tests and output JUnit XML
-        run: cargo test --workspace --all-targets --no-fail-fast -- --format=json | cargo2junit --input-format=json > junit.xml
+        run: cargo test --workspace --all-targets --no-fail-fast -- --format=json -Z unstable-options | cargo2junit --input-format=json > junit.xml
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
@@ -81,6 +96,7 @@ jobs:
 
   coverage:
     name: Coverage
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +107,11 @@ jobs:
         with:
           shared-key: "rust-cache-${{ hashFiles('**/Cargo.lock') }}"
           cache-on-failure: true
+      - name: Download target dir
+        uses: actions/download-artifact@v4
+        with:
+          name: target-dir
+          path: target
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
       - name: Run code coverage
