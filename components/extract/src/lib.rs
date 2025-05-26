@@ -117,7 +117,8 @@ mod tests {
         let _ = fs::remove_dir_all("logs");
         init_logging_once();
         log::info!("Test log message for file logging");
-        thread::sleep(Duration::from_millis(100));
+        log::logger().flush();
+        thread::sleep(Duration::from_millis(300));
         let log_dir = fs::read_dir("logs").expect("logs dir should exist");
         let mut found = false;
         for entry in log_dir {
