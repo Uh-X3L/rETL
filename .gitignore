@@ -64,3 +64,11 @@ create_etl_maturity_issues.sh
 
 test_all.sh
 lcov*.info
+test_pr.sh
+
+# Ignore devcontainer and all its contents
+.devcontainer/
+
+# Rust toolchain directory
+.rustup/
+.cargo/

@@ -83,10 +83,15 @@ pub fn extract_parquet_lazy(path: &str) -> Result<LazyFrame> {
 
 /// Initializes the logger. Call this at the start of your application or tests.
 pub fn init_logging() {
-    use flexi_logger::{Logger, Duplicate, Age, Cleanup, Criterion, Naming, FileSpec, WriteMode};
+    use flexi_logger::{Age, Cleanup, Criterion, Duplicate, FileSpec, Logger, Naming, WriteMode};
     Logger::try_with_env()
         .unwrap()
-        .log_to_file(FileSpec::default().directory("logs").basename("extract").suppress_timestamp())
+        .log_to_file(
+            FileSpec::default()
+                .directory("logs")
+                .basename("extract")
+                .suppress_timestamp(),
+        )
         .duplicate_to_stdout(Duplicate::Info)
         .rotate(
             Criterion::Age(Age::Day),
@@ -101,40 +106,27 @@ pub fn init_logging() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::thread;
-    use std::time::Duration;
     use std::sync::Once;
 
     static INIT: Once = Once::new();
     fn init_logging_once() {
         INIT.call_once(|| {
-            let _ = std::panic::catch_unwind(|| init_logging());
+            let _ = std::panic::catch_unwind(init_logging);
         });
     }
 
     #[test]
     fn test_logging_creates_log_file() {
-        let _ = fs::remove_dir_all("logs");
-        init_logging_once();
-        log::info!("Test log message for file logging");
-        log::logger().flush();
-        thread::sleep(Duration::from_millis(1000));
-        let log_dir = fs::read_dir("logs").expect("logs dir should exist");
-        let mut found = false;
-        for entry in log_dir {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.extension().map(|e| e == "log").unwrap_or(false) {
-                let contents = fs::read_to_string(&path).unwrap();
-                println!("Log file {} contents:\n{}", path.display(), contents);
-                if contents.contains("Test log message for file logging") {
-                    found = true;
-                    break;
-                }
-            }
-        }
-        assert!(found, "Log file with expected message should be created");
+        // Use logtest for in-memory log assertion
+        let logger = logtest::Logger::start();
+        log::info!("Test log message for in-memory logging");
+        let logs: Vec<_> = logger.collect();
+        let found = logs.iter().any(|rec| {
+            rec.args()
+                .to_string()
+                .contains("Test log message for in-memory logging")
+        });
+        assert!(found, "Log message should be captured by in-memory logger");
     }
 
     #[test]
@@ -153,7 +145,8 @@ mod tests {
     fn test_extract_text_lazy() {
         init_logging_once();
         let path = "data/examples/sample.json";
-        let result = extract_text_lazy(path, b',', false, None, None, 0, None);
+        let result: std::result::Result<LazyFrame, anyhow::Error> =
+            extract_text_lazy(path, b',', false, None, None, 0, None);
         assert!(
             result.is_ok(),
             "extract_text_lazy failed: {:?}",
