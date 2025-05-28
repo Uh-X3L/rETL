@@ -157,7 +157,22 @@ pub fn extract_json_lazy_source(source: DataSource) -> Result<LazyFrame> {
 /// Extracts a JSON LazyFrame from an in-memory string (e.g., HTTP response).
 pub fn extract_json_lazy_from_str(s: &str) -> Result<LazyFrame> {
     use std::io::Cursor;
-    let cursor = Cursor::new(s);
+    let s = s.trim();
+    // If input is a JSON array, convert to NDJSON
+    let ndjson = if s.starts_with('[') && s.ends_with(']') {
+        let v: serde_json::Value = serde_json::from_str(s)?;
+        if let serde_json::Value::Array(arr) = v {
+            arr.into_iter()
+                .map(|item| serde_json::to_string(&item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n")
+        } else {
+            s.to_string()
+        }
+    } else {
+        s.to_string()
+    };
+    let cursor = Cursor::new(ndjson);
     let df = polars::prelude::JsonLineReader::new(cursor)
         .finish()
         .map_err(|e| anyhow::anyhow!(e))?;
@@ -282,8 +297,13 @@ pub fn extract_avro_lazy_source(source: DataSource) -> Result<LazyFrame> {
                 let map = apache_avro::from_value::<Value>(&value)?;
                 rows.push(map);
             }
-            let json = serde_json::to_string(&rows)?;
-            let cursor = Cursor::new(json);
+            // Convert to NDJSON
+            let ndjson = rows
+                .into_iter()
+                .map(|item| serde_json::to_string(&item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n");
+            let cursor = Cursor::new(ndjson);
             let df = polars::prelude::JsonLineReader::new(cursor)
                 .finish()
                 .map_err(|e: polars::prelude::PolarsError| anyhow::anyhow!(e))?;
@@ -298,8 +318,13 @@ pub fn extract_avro_lazy_source(source: DataSource) -> Result<LazyFrame> {
                 let map = apache_avro::from_value::<Value>(&value)?;
                 rows.push(map);
             }
-            let json = serde_json::to_string(&rows)?;
-            let cursor = Cursor::new(json);
+            // Convert to NDJSON
+            let ndjson = rows
+                .into_iter()
+                .map(|item| serde_json::to_string(&item))
+                .collect::<Result<Vec<_>, _>>()?
+                .join("\n");
+            let cursor = Cursor::new(ndjson);
             let df = polars::prelude::JsonLineReader::new(cursor)
                 .finish()
                 .map_err(|e: polars::prelude::PolarsError| anyhow::anyhow!(e))?;
@@ -310,8 +335,12 @@ pub fn extract_avro_lazy_source(source: DataSource) -> Result<LazyFrame> {
 
 /// Extracts an ORC file using orc-format from a file path or in-memory data.
 pub fn extract_orc_lazy_source(source: DataSource) -> Result<LazyFrame> {
+    use std::fs;
     match source {
-        DataSource::File(_path) => {
+        DataSource::File(path) => {
+            if !fs::metadata(path).is_ok() {
+                return Err(anyhow::anyhow!("ORC file not found: {}", path));
+            }
             // ORC to DataFrame conversion is not yet supported in polars, so just return Ok(empty)
             Ok(polars::prelude::DataFrame::default().lazy())
         }
@@ -403,7 +432,7 @@ mod tests {
         assert_eq!(df.height(), 0, "ORC DataFrame should be empty (not supported)");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_extract_http_json_placeholder() {
         init_logging_once();
         let url = "https://jsonplaceholder.typicode.com/users";
@@ -417,8 +446,9 @@ mod tests {
     }
 
     // Integration test: combine local file and HTTP data
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_csv_and_http() {
+        init_logging_once();
         use polars::prelude::*;
         let csv_path = "data/examples/sample.csv";
         let df_csv = extract_csv_lazy_source(DataSource::File(csv_path), true).unwrap().collect().unwrap();
@@ -439,8 +469,9 @@ mod tests {
         assert!(combined.height() > 0, "Combined DataFrame should not be empty");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_json_and_http() {
+        init_logging_once();
         use polars::prelude::*;
         let json_path = "data/examples/sample.json";
         let df_json = extract_json_lazy_source(DataSource::File(json_path)).unwrap().collect().unwrap();
@@ -461,8 +492,9 @@ mod tests {
         assert!(combined.height() > 0, "Combined DataFrame should not be empty");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_excel_and_http() {
+        init_logging_once();
         let path = "data/examples/sample.xlsx";
         let df_excel = extract_excel_lazy_source(DataSource::File(path)).unwrap().collect().unwrap();
         // Fetch HTTP JSON
@@ -475,8 +507,9 @@ mod tests {
         assert!(df_excel.height() > 0, "Excel DataFrame should not be empty");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_avro_and_http() {
+        init_logging_once();
         let path = "data/examples/sample.avro";
         let df_avro = extract_avro_lazy_source(DataSource::File(path));
         if let Ok(df_avro) = df_avro {
@@ -491,8 +524,9 @@ mod tests {
         assert!(df_http.height() > 0, "HTTP DataFrame should not be empty");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_orc_and_http() {
+        init_logging_once();
         let path = "data/examples/sample.orc";
         let df_orc = extract_orc_lazy_source(DataSource::File(path)).unwrap().collect().unwrap();
         // Fetch HTTP JSON
@@ -558,14 +592,14 @@ mod tests {
         let _ = std::fs::remove_file(path);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_extract_json_lazy_from_str_malformed() {
         let bad_json = "{not valid json";
         let result = extract_json_lazy_from_str(bad_json);
         assert!(result.is_err(), "Should error on malformed in-memory JSON");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_extract_http_json_404() {
         let url = "https://jsonplaceholder.typicode.com/doesnotexist";
         let client = reqwest::Client::new();
