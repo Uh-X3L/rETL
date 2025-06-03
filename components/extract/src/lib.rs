@@ -492,7 +492,6 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_csv_and_http() {
         init_logging_once();
-        use polars::prelude::*;
         let csv_path = "components/extract/data/examples/sample.csv";
         
         // Check if CSV file exists, if not skip this test
@@ -515,7 +514,6 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn integration_test_combine_json_and_http() {
         init_logging_once();
-        use polars::prelude::*;
         let json_path = "components/extract/data/examples/sample.json";
         
         // Check if JSON file exists, if not skip this test
