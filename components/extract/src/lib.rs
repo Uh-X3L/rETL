@@ -3,11 +3,8 @@ use calamine::open_workbook_auto;
 use calamine::Reader;
 use calamine::Xlsx;
 use log::{error, info};
+use polars::prelude::{IntoLazy, LazyCsvReader, LazyFileListReader, LazyFrame, LazyJsonLineReader, SerReader, Series, DataFrame, IntoColumn};
 use polars::prelude::NamedFrom;
-use polars::prelude::{
-    DataFrame, IntoColumn, IntoLazy, LazyCsvReader, LazyFileListReader, LazyFrame,
-    LazyJsonLineReader, SerReader, Series,
-};
 
 /// Data source for extractors: either a file path or in-memory data
 pub enum DataSource<'a> {
@@ -26,15 +23,19 @@ where
     }
 }
 
-pub fn extract_csv_lazy_source(source: DataSource, has_header: bool) -> anyhow::Result<LazyFrame> {
+pub fn extract_csv_lazy_source(
+    source: DataSource,
+    has_header: bool,
+) -> anyhow::Result<LazyFrame> {
     extract_dispatch(
         source,
         // File‐based lazy reader
         |path| {
             // 1) Build the LazyCsvReader, finish it, then log
             let lf = LazyCsvReader::new(path)
-                .with_has_header(has_header) // set header or no–header :contentReference[oaicite:0]{index=0}
-                .finish()?;
+                .with_has_header(has_header)               // set header or no–header :contentReference[oaicite:0]{index=0}
+                .finish()?
+            ;
             info!("Successfully loaded CSV file: {}", path);
             Ok(lf)
         },
@@ -46,10 +47,13 @@ pub fn extract_csv_lazy_source(source: DataSource, has_header: bool) -> anyhow::
             let cursor = Cursor::new(data);
 
             // 2) Build CsvReadOptions
-            let opts = CsvReadOptions::default().with_has_header(has_header); // builder flag on reader options :contentReference[oaicite:1]{index=1}
+            let opts = CsvReadOptions::default()
+                .with_has_header(has_header);              // builder flag on reader options :contentReference[oaicite:1]{index=1}
 
             // 3) Apply options to eager CsvReader and convert to lazy
-            let df = CsvReader::new(cursor).with_options(opts).finish()?;
+            let df = CsvReader::new(cursor)
+                .with_options(opts)
+                .finish()?;  
 
             Ok(df.lazy())
         },
@@ -275,13 +279,14 @@ pub fn extract_excel_lazy_source(source: DataSource) -> Result<LazyFrame> {
     }
 }
 
+
 /// Extracts an Avro file using apache-avro from a file path or in-memory data.
 pub fn extract_avro_lazy_source(source: DataSource) -> Result<LazyFrame> {
     use apache_avro::Reader as AvroReader;
-    use polars::prelude::SerReader;
     use polars::prelude::*;
-    use serde_json::Value;
+    use polars::prelude::SerReader;
     use std::io::Cursor;
+    use serde_json::Value;
     match source {
         DataSource::File(path) => {
             let file = std::fs::File::open(path)?;
@@ -339,7 +344,9 @@ pub fn extract_orc_lazy_source(source: DataSource) -> Result<LazyFrame> {
             // ORC to DataFrame conversion is not yet supported in polars, so just return Ok(empty)
             Ok(polars::prelude::DataFrame::default().lazy())
         }
-        DataSource::Memory(_data) => Ok(polars::prelude::DataFrame::default().lazy()),
+        DataSource::Memory(_data) => {
+            Ok(polars::prelude::DataFrame::default().lazy())
+        }
     }
 }
 
@@ -368,15 +375,15 @@ pub fn init_logging() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
-    use polars::datatypes::PlSmallStr;
-    use std::sync::Mutex;
     use std::sync::Once;
-
+    use polars::datatypes::PlSmallStr;
+    use lazy_static::lazy_static;
+    use std::sync::Mutex;
+    
     lazy_static! {
         static ref LOGS: Mutex<Vec<String>> = Mutex::new(Vec::new());
     }
-
+    
     static INIT: Once = Once::new();
     fn init_logging_once() {
         INIT.call_once(|| {
@@ -417,23 +424,21 @@ mod tests {
 
         // Verify the log was captured
         let logs = LOGS.lock().unwrap();
-        let found = logs
-            .iter()
-            .any(|log| log.contains("Test log message for in-memory logging"));
+        let found = logs.iter().any(|log| log.contains("Test log message for in-memory logging"));
         // Since logger might already be set, just check if our function doesn't panic
         let _ = found; // Don't assert, just check the logging mechanism works
     }
 
     #[test]
     fn test_read_excel() {
-        use calamine::open_workbook_auto;
+        use calamine::{open_workbook_auto};
         let path = "components/extract/data/examples/sample.xlsx";
-
+        
         // Check if Excel file exists, if not skip this test
         if !std::path::Path::new(path).exists() {
             return; // Skip test if file doesn't exist
         }
-
+        
         let workbook = open_workbook_auto(path);
         assert!(workbook.is_ok(), "Excel file should be readable");
     }
@@ -456,21 +461,14 @@ mod tests {
     fn test_read_orc() {
         let path = "components/extract/data/examples/sample.orc";
         let result = extract_orc_lazy_source(DataSource::File(path));
-
+        
         // ORC files are not supported yet, but the function should handle missing files gracefully
         if std::path::Path::new(path).exists() {
-            assert!(
-                result.is_ok(),
-                "ORC lazy extractor should not error (returns empty DataFrame)"
-            );
+            assert!(result.is_ok(), "ORC lazy extractor should not error (returns empty DataFrame)");
             let df = result.unwrap().collect();
             assert!(df.is_ok(), "ORC lazy extractor should produce a DataFrame");
             let df = df.unwrap();
-            assert_eq!(
-                df.height(),
-                0,
-                "ORC DataFrame should be empty (not supported)"
-            );
+            assert_eq!(df.height(), 0, "ORC DataFrame should be empty (not supported)");
         } else {
             // File doesn't exist, should return error
             assert!(result.is_err(), "Should error on missing ORC file");
@@ -487,12 +485,7 @@ mod tests {
         assert!(df.is_ok(), "HTTP extract failed: {:?}", df.err());
         let df = df.unwrap().collect().unwrap();
         assert!(df.height() > 0, "HTTP DataFrame should not be empty");
-        assert!(
-            df.get_column_names()
-                .iter()
-                .any(|col| <PlSmallStr as AsRef<str>>::as_ref(col) == "name"),
-            "Expected 'name' column"
-        );
+        assert!(df.get_column_names().iter().any(|col| <PlSmallStr as AsRef<str>>::as_ref(col) == "name"), "Expected 'name' column");
     }
 
     // Integration test: combine local file and HTTP data
@@ -500,22 +493,19 @@ mod tests {
     async fn integration_test_combine_csv_and_http() {
         init_logging_once();
         let csv_path = "components/extract/data/examples/sample.csv";
-
+        
         // Check if CSV file exists, if not skip this test
         if !std::path::Path::new(csv_path).exists() {
             return; // Skip test if file doesn't exist
         }
-
-        let df_csv = extract_csv_lazy_source(DataSource::File(csv_path), true)
-            .unwrap()
-            .collect()
-            .unwrap();
+        
+        let df_csv = extract_csv_lazy_source(DataSource::File(csv_path), true).unwrap().collect().unwrap();
         let url = "https://jsonplaceholder.typicode.com/users";
         let client = reqwest::Client::new();
         let res = client.get(url).send().await.unwrap().text().await.unwrap();
         let df_http = extract_json_lazy_from_str(&res).unwrap().collect().unwrap();
-
-        // Instead of trying to concat (which fails due to different schemas),
+        
+        // Instead of trying to concat (which fails due to different schemas), 
         // just verify both DataFrames are valid
         assert!(df_csv.height() > 0, "CSV DataFrame should not be empty");
         assert!(df_http.height() > 0, "HTTP DataFrame should not be empty");
@@ -525,22 +515,19 @@ mod tests {
     async fn integration_test_combine_json_and_http() {
         init_logging_once();
         let json_path = "components/extract/data/examples/sample.json";
-
+        
         // Check if JSON file exists, if not skip this test
         if !std::path::Path::new(json_path).exists() {
             return; // Skip test if file doesn't exist
         }
-
-        let df_json = extract_json_lazy_source(DataSource::File(json_path))
-            .unwrap()
-            .collect()
-            .unwrap();
+        
+        let df_json = extract_json_lazy_source(DataSource::File(json_path)).unwrap().collect().unwrap();
         let url = "https://jsonplaceholder.typicode.com/users";
         let client = reqwest::Client::new();
         let res = client.get(url).send().await.unwrap().text().await.unwrap();
         let df_http = extract_json_lazy_from_str(&res).unwrap().collect().unwrap();
-
-        // Instead of trying to concat (which fails due to different schemas),
+        
+        // Instead of trying to concat (which fails due to different schemas), 
         // just verify both DataFrames are valid
         assert!(df_json.height() > 0, "JSON DataFrame should not be empty");
         assert!(df_http.height() > 0, "HTTP DataFrame should not be empty");
@@ -550,16 +537,13 @@ mod tests {
     async fn integration_test_combine_excel_and_http() {
         init_logging_once();
         let path = "components/extract/data/examples/sample.xlsx";
-
+        
         // Check if Excel file exists, if not skip this test
         if !std::path::Path::new(path).exists() {
             return; // Skip test if file doesn't exist
         }
-
-        let df_excel = extract_excel_lazy_source(DataSource::File(path))
-            .unwrap()
-            .collect()
-            .unwrap();
+        
+        let df_excel = extract_excel_lazy_source(DataSource::File(path)).unwrap().collect().unwrap();
         // Fetch HTTP JSON
         let url = "https://jsonplaceholder.typicode.com/users";
         let client = reqwest::Client::new();
@@ -591,43 +575,30 @@ mod tests {
     async fn integration_test_combine_orc_and_http() {
         init_logging_once();
         let path = "components/extract/data/examples/sample.orc";
-
+        
         // Check if ORC file exists, if not skip this test
         if !std::path::Path::new(path).exists() {
             println!("ORC file not found, skipping test");
             return;
         }
-
-        let df_orc = extract_orc_lazy_source(DataSource::File(path))
-            .unwrap()
-            .collect()
-            .unwrap();
+        
+        let df_orc = extract_orc_lazy_source(DataSource::File(path)).unwrap().collect().unwrap();
         // Fetch HTTP JSON
         let url = "https://jsonplaceholder.typicode.com/users";
         let client = reqwest::Client::new();
         let res = client.get(url).send().await.unwrap().text().await.unwrap();
         let df_http = extract_json_lazy_from_str(&res).unwrap().collect().unwrap();
         assert!(df_http.height() > 0, "HTTP DataFrame should not be empty");
-        assert_eq!(
-            df_orc.height(),
-            0,
-            "ORC DataFrame should be empty (not supported)"
-        );
+        assert_eq!(df_orc.height(), 0, "ORC DataFrame should be empty (not supported)");
     }
 
     #[test]
     fn test_extract_csv_lazy_missing_file() {
-        let result = extract_csv_lazy_source(
-            DataSource::File("components/extract/data/examples/does_not_exist.csv"),
-            true,
-        );
+        let result = extract_csv_lazy_source(DataSource::File("components/extract/data/examples/does_not_exist.csv"), true);
         // For lazy operations, the error might only appear when collecting
         if let Ok(lazy_df) = result {
             let collect_result = lazy_df.collect();
-            assert!(
-                collect_result.is_err(),
-                "Should error when collecting non-existent CSV file"
-            );
+            assert!(collect_result.is_err(), "Should error when collecting non-existent CSV file");
         }
         // If it errors immediately, that's also acceptable - no assertion needed
     }
@@ -638,7 +609,7 @@ mod tests {
         let path = "components/extract/data/examples/malformed.csv";
         // Create directory if it doesn't exist
         let _ = fs::create_dir_all("components/extract/data/examples");
-
+        
         use std::fs::File;
         use std::io::Write;
         let mut file = File::create(path).unwrap();
@@ -659,7 +630,7 @@ mod tests {
         let path = "components/extract/data/examples/empty.json";
         // Create directory if it doesn't exist
         let _ = fs::create_dir_all("components/extract/data/examples");
-
+        
         use std::fs::File;
         use std::io::Write;
         let mut file = File::create(path).unwrap();
@@ -668,14 +639,9 @@ mod tests {
         // For lazy operations, the error might only appear when collecting
         if let Ok(lazy_df) = result {
             let collect_result = lazy_df.collect();
-            assert!(
-                collect_result.is_err(),
-                "Should error when collecting empty JSON file"
-            );
-        } else {
-            // If it errors immediately, that's also fine
-            assert!(true);
+            assert!(collect_result.is_err(), "Should error when collecting empty JSON file");
         }
+        // If it errors immediately, that's also acceptable - no assertion needed
         let _ = std::fs::remove_file(path);
     }
 
@@ -685,7 +651,7 @@ mod tests {
         let path = "components/extract/data/examples/malformed.json";
         // Create directory if it doesn't exist
         let _ = fs::create_dir_all("components/extract/data/examples");
-
+        
         use std::fs::File;
         use std::io::Write;
         let mut file = File::create(path).unwrap();
@@ -694,14 +660,9 @@ mod tests {
         // For lazy operations, the error might only appear when collecting
         if let Ok(lazy_df) = result {
             let collect_result = lazy_df.collect();
-            assert!(
-                collect_result.is_err(),
-                "Should error when collecting malformed JSON file"
-            );
-        } else {
-            // If it errors immediately, that's also fine
-            assert!(true);
+            assert!(collect_result.is_err(), "Should error when collecting malformed JSON file");
         }
+        // If it errors immediately, that's also acceptable - no assertion needed
         let _ = std::fs::remove_file(path);
     }
 
@@ -726,8 +687,7 @@ mod tests {
 
     #[test]
     fn test_extract_avro_lazy_missing_file() {
-        let result =
-            extract_avro_lazy_source(DataSource::File("data/examples/does_not_exist.avro"));
+        let result = extract_avro_lazy_source(DataSource::File("data/examples/does_not_exist.avro"));
         assert!(result.is_err(), "Should error on missing Avro file");
     }
 
@@ -737,4 +697,3 @@ mod tests {
         assert!(result.is_err(), "Should error on missing ORC file");
     }
 }
-// Added a comment to test editing functionality
