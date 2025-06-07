@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite id="0" name="cargo test #0" package="testsuite/cargo test #0" tests="0" errors="0" failures="0" hostname="localhost" timestamp="2025-06-05T22:39:14.954995025Z" time="0" />
+  <testsuite id="1" name="cargo test #1" package="testsuite/cargo test #1" tests="18" errors="0" failures="0" hostname="localhost" timestamp="2025-06-05T22:39:14.954995025Z" time="0">
+    <testcase name="test_extract_avro_lazy_missing_file" time="0" classname="tests" />
+    <testcase name="integration_test_combine_json_and_http" time="0" classname="tests" />
+    <testcase name="integration_test_combine_csv_and_http" time="0" classname="tests" />
+    <testcase name="integration_test_combine_orc_and_http" time="0" classname="tests" />
+    <testcase name="integration_test_combine_excel_and_http" time="0" classname="tests" />
+    <testcase name="test_extract_json_lazy_from_str_malformed" time="0" classname="tests" />
+    <testcase name="test_extract_orc_lazy_missing_file" time="0" classname="tests" />
+    <testcase name="test_logging_creates_log_file" time="0" classname="tests" />
+    <testcase name="test_read_avro" time="0" classname="tests" />
+    <testcase name="test_read_excel" time="0" classname="tests" />
+    <testcase name="test_read_orc" time="0" classname="tests" />
+    <testcase name="test_extract_json_lazy_malformed" time="0" classname="tests" />
+    <testcase name="test_extract_json_lazy_empty" time="0" classname="tests" />
+    <testcase name="test_extract_csv_lazy_missing_file" time="0" classname="tests" />
+    <testcase name="integration_test_combine_avro_and_http" time="0" classname="tests" />
+    <testcase name="test_extract_http_json_placeholder" time="0" classname="tests" />
+    <testcase name="test_extract_http_json_404" time="0" classname="tests" />
+    <testcase name="test_extract_csv_lazy_malformed" time="0" classname="tests" />
+  </testsuite>
+  <testsuite id="2" name="cargo test #2" package="testsuite/cargo test #2" tests="2" errors="0" failures="0" hostname="localhost" timestamp="2025-06-05T22:39:14.954995025Z" time="0">
+    <testcase name="it_works" time="0" classname="tests" />
+    <testcase name="test_load_json" time="0" classname="tests" />
+  </testsuite>
+  <testsuite id="3" name="cargo test #3" package="testsuite/cargo test #3" tests="1" errors="0" failures="0" hostname="localhost" timestamp="2025-06-05T22:39:14.954995025Z" time="0">
+    <testcase name="smoke_test_connect" time="0" classname="tests" />
+  </testsuite>
+  <testsuite id="4" name="cargo test #4" package="testsuite/cargo test #4" tests="2" errors="0" failures="0" hostname="localhost" timestamp="2025-06-05T22:39:14.954995025Z" time="0">
+    <testcase name="it_works" time="0" classname="tests" />
+    <testcase name="test_select_columns_and_limit_rows" time="0" classname="tests" />
+  </testsuite>
+</testsuites>
