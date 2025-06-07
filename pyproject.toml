@@ -1,0 +1,141 @@
+[tool.poetry]
+name = "retl-orchestration"
+version = "0.1.0"
+description = "Cloud-agnostic ETL orchestration for rETL pipelines"
+authors = ["rETL Team <team@retl.dev>"]
+readme = "README.md"
+packages = [
+    { include = "scripts" },
+    { include = "utils" },
+    { include = "dags" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+# Core orchestration frameworks
+apache-airflow = {extras = ["kubernetes", "postgres"], version = "^2.6.0"}
+prefect = "^2.10.0"
+dagster = {extras = ["k8s"], version = "^1.3.0"}
+
+# Spark and data processing
+pyspark = "^3.4.0"
+# For Spark SQL Server/Synapse connectivity
+# Note: JDBC driver will be added via spark.jars.packages in runtime
+
+# Storage and data formats
+s3fs = "^2023.6.0"
+pyarrow = "^12.0.0"
+
+# Secrets management
+hvac = "^1.1.0"  # HashiCorp Vault client
+boto3 = "^1.26.0"  # AWS SDK (for Secrets Manager)
+
+# Kubernetes integration
+kubernetes = "^26.1.0"
+
+# Utilities
+pydantic = "^2.0.0"
+click = "^8.1.0"
+python-dotenv = "^1.0.0"
+structlog = "^23.1.0"
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.0"
+pytest-asyncio = "^0.21.0"
+
+# Code quality
+black = "^23.3.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+mypy = "^1.3.0"
+pre-commit = "^3.3.0"
+
+# Documentation
+sphinx = "^7.0.0"
+sphinx-rtd-theme = "^1.2.0"
+
+[tool.poetry.scripts]
+run-copy = "scripts.run_copy:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | target
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["scripts", "utils", "dags"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
