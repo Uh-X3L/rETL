@@ -8,15 +8,17 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
 
 ## Project Structure
 
-### Rust Components (High-Performance Core)
+The project is organized into two main compartments for clear separation of concerns:
+
+### `rust-core/` - High-Performance Core Components
 - `components/` - Core ETL crates:
   - `extract/` - Data extraction from various sources
   - `conform/` - Data profiling and schema normalization
   - `transform/` - Data transformation utilities
   - `load/` - Data loading to various sinks
-  - `sqldb/` - Database connectivity and utilities
+- `sqldb/` - Database connectivity and utilities
 
-### Python Orchestration Layer
+### `python-orchestration/` - Cloud-Agnostic Orchestration Layer
 - `dags/` - Orchestrator definitions (Airflow DAGs, Prefect Flows, Dagster Jobs)
 - `scripts/` - Spark job scripts for Kubernetes execution
 - `utils/` - Shared utilities (secrets management, logging)
@@ -24,9 +26,8 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
 - `infra/` - Infrastructure as Code (Helm charts, K8s manifests)
 - `templates/` - Pipeline templates and examples
 
-### Documentation & Configuration
+### Shared Resources
 - `docs/` - Architecture guides, migration plans, best practices
-- `pyproject.toml` - Python dependencies and tooling configuration
 - `.pre-commit-config.yaml` - Code quality hooks for both Rust and Python
 
 ## Getting Started
@@ -47,11 +48,15 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
 
 2. **Build Rust components:**
    ```sh
+   cd rust-core
    cargo build --workspace
+   cd ..
    ```
 
 3. **Setup Python environment:**
    ```sh
+   cd python-orchestration
+   
    # Install Poetry if not already installed
    curl -sSL https://install.python-poetry.org | python3 -
    
@@ -60,6 +65,7 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
    
    # Activate virtual environment
    poetry shell
+   cd ..
    ```
 
 4. **Install pre-commit hooks:**
@@ -72,6 +78,7 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
 #### Running a Spark Copy Job
 ```sh
 # Example: Copy from SQL database to Parquet
+cd python-orchestration
 python scripts/run_copy.py \
   --jdbc-url "jdbc:sqlserver://myserver.example.com:1433;database=mydb" \
   --sql "SELECT * FROM dbo.accounts WHERE created_date >= '2025-01-01'" \
@@ -83,12 +90,15 @@ python scripts/run_copy.py \
 #### Testing the Framework
 ```sh
 # Run Python tests
+cd python-orchestration
 pytest tests/
 
-# Run Rust tests
+# Run Rust tests  
+cd ../rust-core
 cargo test --workspace
 
-# Run all quality checks
+# Run all quality checks (from project root)
+cd ..
 pre-commit run --all-files
 ```
 
@@ -109,27 +119,36 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 
 Before submitting a pull request, please ensure your code passes all quality checks:
 
-- Run code formatting:
-  ```sh
-  cargo fmt --all
-  ```
-- Run the linter:
-  ```sh
-  cargo clippy --workspace --all-targets -- -D warnings
-  ```
-- Run all tests:
-  ```sh
-  cargo test --workspace --all-targets
-  ```
-- Run security audit:
-  ```sh
-  cargo install cargo-audit --locked # if not already installed
-  cargo audit
-  ```
-- Build documentation:
-  ```sh
-  cargo doc --workspace --no-deps --document-private-items
-  ```
+**For Rust components:**
+```sh
+cd rust-core
+# Run code formatting
+cargo fmt --all
+
+# Run the linter  
+cargo clippy --workspace --all-targets -- -D warnings
+
+# Run all tests
+cargo test --workspace --all-targets
+
+# Run security audit
+cargo install cargo-audit --locked # if not already installed
+cargo audit
+
+# Build documentation
+cargo doc --workspace --no-deps --document-private-items
+```
+
+**For Python components:**
+```sh
+cd python-orchestration
+# Run tests
+pytest tests/
+
+# Run code formatting and linting (via pre-commit)
+cd ..
+pre-commit run --all-files
+```
 
 All of these checks are run automatically in CI, but running them locally helps you catch issues early.
 
