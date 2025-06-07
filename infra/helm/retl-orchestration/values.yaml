@@ -1,0 +1,91 @@
+# Default values for rETL orchestration
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# Airflow configuration
+airflow:
+  enabled: true
+  executor: KubernetesExecutor
+  
+  images:
+    airflow:
+      repository: apache/airflow
+      tag: "2.6.0"
+      pullPolicy: IfNotPresent
+  
+  dags:
+    gitSync:
+      enabled: true
+      repo: https://github.com/YourOrg/rETL.git
+      branch: main
+      subPath: dags/
+  
+  webserver:
+    service:
+      type: ClusterIP
+      port: 8080
+
+# Spark Operator configuration
+sparkOperator:
+  enabled: true
+  
+  image:
+    repository: gcr.io/spark-operator/spark-operator
+    tag: "v1beta2-1.3.8-3.1.1"
+    pullPolicy: IfNotPresent
+  
+  sparkJobNamespace: default
+  
+  webhook:
+    enable: true
+
+# Secrets management
+secrets:
+  # External secrets operator configuration
+  externalSecrets:
+    enabled: false
+    
+  # Manual secret creation
+  synapse:
+    username: "synapse-user"
+    password: "synapse-password"
+    
+  storage:
+    accessKey: "storage-access-key"
+    secretKey: "storage-secret-key"
+
+# Service accounts
+serviceAccounts:
+  spark:
+    driver:
+      create: true
+      name: spark-driver
+    executor:
+      create: true
+      name: spark-executor
+
+# Resource limits
+resources:
+  spark:
+    driver:
+      memory: "1g"
+      cpu: "1"
+    executor:
+      memory: "2g"
+      cpu: "1"
+      instances: 2
+
+# Storage configuration
+storage:
+  # Default storage class for PVCs
+  storageClass: "gp2"
+  
+  # Storage configuration for different components
+  logs:
+    size: "10Gi"
+  data:
+    size: "50Gi"

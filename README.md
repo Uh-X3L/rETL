@@ -1,35 +1,96 @@
-# rETL: Modular Rust ETL Pipeline
+# rETL: Hybrid Rust + Python ETL Framework
+
 | Pull Requests CI Status                                                                                   | Full Repository Analysis Status                                                                                 | Coverage (Codecov) Status                                                              |
 |-----------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
 | [![Rust CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml) | [![CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml) | [![codecov](https://codecov.io/gh/Uh-X3L/rETL/graph/badge.svg)](https://codecov.io/gh/Uh-X3L/rETL) |
 
-
-rETL is a modular, extensible ETL (Extract, Transform, Load) framework written in Rust, designed for data engineering and analytics workflows. The project is organized as a Rust workspace with separate crates for each ETL stage.
+rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-performance Rust components with Python orchestration. 
 
 ## Project Structure
-- `components/` - Main ETL crates:
+
+### Rust Components (High-Performance Core)
+- `components/` - Core ETL crates:
   - `extract/` - Data extraction from various sources
   - `conform/` - Data profiling and schema normalization
   - `transform/` - Data transformation utilities
   - `load/` - Data loading to various sinks
-- `docs/` - Documentation, milestones, and guides
-- `scripts/` - Utility scripts (e.g., issue automation)
+  - `sqldb/` - Database connectivity and utilities
+
+### Python Orchestration Layer
+- `dags/` - Orchestrator definitions (Airflow DAGs, Prefect Flows, Dagster Jobs)
+- `scripts/` - Spark job scripts for Kubernetes execution
+- `utils/` - Shared utilities (secrets management, logging)
+- `tests/` - Python test suite
+- `infra/` - Infrastructure as Code (Helm charts, K8s manifests)
+- `templates/` - Pipeline templates and examples
+
+### Documentation & Configuration
+- `docs/` - Architecture guides, migration plans, best practices
+- `pyproject.toml` - Python dependencies and tooling configuration
+- `.pre-commit-config.yaml` - Code quality hooks for both Rust and Python
 
 ## Getting Started
-1. **Clone the repo:**
+
+### Prerequisites
+- **Rust** (1.70+): For building core components
+- **Python** (3.9+): For orchestration layer
+- **Poetry**: For Python dependency management
+- **Docker** & **Kubernetes**: For deployment (optional)
+
+### Quick Start
+
+1. **Clone the repository:**
    ```sh
    git clone https://github.com/Uh-X3L/rETL.git
    cd rETL
    ```
-2. **Build the workspace:**
+
+2. **Build Rust components:**
    ```sh
    cargo build --workspace
    ```
-3. **Run the CLI:**
+
+3. **Setup Python environment:**
    ```sh
-   cd components/data-profiler
-   cargo run -- [OPTIONS]
+   # Install Poetry if not already installed
+   curl -sSL https://install.python-poetry.org | python3 -
+   
+   # Install Python dependencies
+   poetry install
+   
+   # Activate virtual environment
+   poetry shell
    ```
+
+4. **Install pre-commit hooks:**
+   ```sh
+   pre-commit install
+   ```
+
+### Usage Examples
+
+#### Running a Spark Copy Job
+```sh
+# Example: Copy from SQL database to Parquet
+python scripts/run_copy.py \
+  --jdbc-url "jdbc:sqlserver://myserver.example.com:1433;database=mydb" \
+  --sql "SELECT * FROM dbo.accounts WHERE created_date >= '2025-01-01'" \
+  --output-path "s3://my-bucket/data/accounts/" \
+  --username-secret "DB_USERNAME" \
+  --password-secret "DB_PASSWORD"
+```
+
+#### Testing the Framework
+```sh
+# Run Python tests
+pytest tests/
+
+# Run Rust tests
+cargo test --workspace
+
+# Run all quality checks
+pre-commit run --all-files
+```
 
 ## Maintainers
 - Created and maintained by [Uh-X3L](https://github.com/Uh-X3L) — primary maintainer

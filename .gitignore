@@ -50,6 +50,9 @@ components/data-profiler/data/*.log
 # Ignore markdown files
 *.md
 
+# Ignore migration planning documents
+docs/planToMigrate/
+
 # Ignore backup files
 *~
 *.swp
@@ -72,3 +75,4 @@ test_pr.sh
 # Rust toolchain directory
 .rustup/
 .cargo/
+poetry.lock
