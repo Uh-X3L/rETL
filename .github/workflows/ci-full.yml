@@ -83,9 +83,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: target-dir
-          path: target
+          path: target      
       - name: Install cargo2junit
-        run: cargo install cargo2junit --locked      
+        run: cargo install cargo2junit --locked
+      - name: Run tests and output JUnit XML
         run: cargo test --workspace --all-targets --no-fail-fast -- -Z unstable-options --format=json | cargo2junit --input-format=json > junit.xml
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
