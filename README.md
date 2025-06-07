@@ -4,23 +4,7 @@
 |-----------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
 | [![Rust CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-pr.yml) | [![CI](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml/badge.svg)](https://github.com/Uh-X3L/rETL/actions/workflows/ci-full.yml) | [![codecov](https://codecov.io/gh/Uh-X3L/rETL/graph/badge.svg)](https://codecov.io/gh/Uh-X3L/rETL) |
 
-rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-performance Rust components with cloud-agnostic Python orchestration. The project enables migration from Azure Synapse Pipelines to open-source orchestrators (Airflow, Prefect, Dagster) while maintaining enterprise-grade performance and reliability.
-
-## Architecture Overview
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  Orchestrator   │───▶│  Spark-on-K8s    │───▶│  Object Storage │
-│ (Airflow/Prefect│    │   (Python Jobs)  │    │   (S3/MinIO)    │
-│   /Dagster)     │    └──────────────────┘    └─────────────────┘
-└─────────────────┘             │                       │
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  Secrets Vault  │    │  Source Database │    │  Data Lakehouse │
-│ (Vault/K8s/AWS) │    │   (Synapse SQL)  │    │  (Iceberg/Delta)│
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-performance Rust components with Python orchestration. 
 
 ## Project Structure
 
@@ -87,13 +71,13 @@ rETL is a hybrid ETL (Extract, Transform, Load) framework combining high-perform
 
 #### Running a Spark Copy Job
 ```sh
-# Example: Copy from Synapse to Parquet
+# Example: Copy from SQL database to Parquet
 python scripts/run_copy.py \
-  --jdbc-url "jdbc:sqlserver://myworkspace.sql.azuresynapse.net:1433;database=mydb" \
+  --jdbc-url "jdbc:sqlserver://myserver.example.com:1433;database=mydb" \
   --sql "SELECT * FROM dbo.accounts WHERE created_date >= '2025-01-01'" \
   --output-path "s3://my-bucket/data/accounts/" \
-  --username-secret "SYNAPSE_USERNAME" \
-  --password-secret "SYNAPSE_PASSWORD"
+  --username-secret "DB_USERNAME" \
+  --password-secret "DB_PASSWORD"
 ```
 
 #### Testing the Framework
