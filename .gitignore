@@ -75,3 +75,4 @@ test_pr.sh
 # Rust toolchain directory
 .rustup/
 .cargo/
+poetry.lock
